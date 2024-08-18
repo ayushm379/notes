@@ -1,0 +1,114 @@
+# News Instagram Feed System
+
+## Functional Reqements
+- Like & Commend in posts
+- Publish and News Feed
+
+
+# Likes and Comments System
+
+## Questions
+- How many layers of Comments is required?
+In Instagram there is 1 layer of comments, i.e., a person cannot comment on a comment on a comment made on a post.
+
+## Database Design
+
+=> Post : { postId, text, imageUrl, createdAt, createdBy }
+=> Commend : { commentId, text, timestamp}
+=> Likes : { likeId, parentId(stores post or comment id), userId, timestamp, isActive, type:(COMMENT/POST) }
+
+What if we want to find number of likes
+SELECT count(*) from Likes where parentId = <id>;
+But this feature is going to be used a lot of time and query will take lots of cpu cycles.
+
+We can add a field likes, which will store count of Port or Comment
+but that data is irrelevant to the table and the table Post and Comment will be updated very frequently
+
+So we will Create another table
+=> Activity {activityId, likes} and it will have connection 
+
+## System For Getting News Feeds
+
+User -- Get feeds by userId -->  API Gateway   -- Private IP --> [UserFeed Service] x N
+             Public IP         (Reverse Proxy)
+
+
+UserFeed Service
+1- Manual Path
+    UserFeed Service
+              ---------> Follow Service (Provide the usersIds that current user follows)
+              ---------> Post Service (Provide Post ids created by userIds, sorted by 'createdAt' time)
+              User Feed will store get Post data for users in cache, to reduce calls on both the services.
+              On Arrival of a new post on Post Service, it will send a call to Notification Service to notify user
+                  and also to post UserFeed service to update it's cache, either incrementally or completely.
+
+2- Recommendation Path
+    UserFeed Service (When ever user performs some actions, learnActions are going to be sent)
+              Learn Actions -> { Watching a video, Liking a post, Following a user, Commenting on post }
+              A model will be trained will will provide the recommendations based on the above learn actions.
+              --------->  Recommendation Service (Provides news feeds based on user's learn actions)
+
+=============================================================================
+# What if we want that multiple users cam have multiple posts
+i.e., one post can be linked to multiple users
+
+
+## Functional Requirements
+- Create Post (Images)
+- Get feeds from friends
+
+## Non Functional Requirements
+- Highly Available
+- Highly Scalable
+- Low latency
+
+## Data Model
+=> User {id, name, avtarURL, age, gender, location}
+=> Post {id, headline, description, imageURL}
+=> Friends {id, userId, friendUserId}
+=> Post_User {id, userId, postId}
+
+## Create a Post
+
+User --> Load Balancer --> Post Service --> DB (Post, Post_User)
+
+Using Sql database we can use CDC Stream (Change Data Capture)
+DB ---- CDC Kafka Stream ---> This will be attached to multiple consumers.
+Consumers:
+1. First Consumer could run an algorithm check if the post follows all community guidelines.
+2. Second Consumer could fetch all features and meta data from the post and store in another database.
+
+All these consumers/processors will run asynchronously, so the client won't have to wait for them.
+
+
+## Get Feed
+
+User --> Load Balancer --> Feed Service --> Post Service
+
+Feed Service will get User Id from user.
+Using UserId, using friend table, it will find all the userIds that are linked with the given user
+Post Service will provide posts from userIds provided by Feed Service
+
+Feed Service will call Ranking Service with all the postIds.
+Ranking Service will Sort(based on createdAt, number of likes) or Filter the postIds.
+Then Feed Service will provide the feeds to user.
+
+But load on Feed Service will be high. Since every time a user wants feed, all the services are involved and lots of database and http calls are present.
+So we will add a cache layer to the Feed service. This cache will contain a mapping of userId and postIds ranked already.
+To save space, we will only store postIds.
+
+## How will cache be populated????
+
+### Real Time Solution
+To the CDC Kafka Stream, we can add another consumer called Feed Processor Consumer.
+This Feed Processor, It will communicate with Ranking Service, Post Service, Friends Service, Feed Service
+and then store that mapping in the cache.
+We can scale up the number of Feed Processors.
+
+### Periodic Solution
+We can have a scheduled Job which will do the same thing, but this will be periodic not real time.
+
+
+
+
+
