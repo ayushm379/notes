@@ -1,0 +1,117 @@
+# Graph Algorithms
+
+## BFS
+Breadth First Search is a traversal algorithm that traverse all adjacent nodes first.
+- Shortest path for unweighted graph
+- Minimum spanning Tree for weighted graph
+
+[java]
+void bfs(Map<Integer, List<Integer>> graph, int start) {
+    Set<Integer> visited = new HashSet<>();
+    Queue<Integer> queue = new LinkedList<>();
+
+    queue.add(start);
+    visited.add(start);
+
+    while(!queue.isEmpty()) {
+        int current = queue.remove();
+        // Perform operations with current node
+
+        List<Integer> adjList = graph.getOrDefault(current, new ArrayList<>());
+        for(int node: adjList) {
+            if(!visited.contains(node)) {
+                queue.add(node);
+                visited.add(node);
+            }
+        }
+    }
+}
+[end]
+
+## DFS
+Depth First Search traverses the current node in depth first then the others
+- it can detect cycle
+- it can find path between two nodes
+- topological sort, this is used by system to add dependencies in order
+- to test if graph is bipartite
+- web crawlers
+- backtracking
+
+[java]
+void dfs(Map<Integer, List<Integer>> graph, int current, Set<Integer> visited) {
+    if(visited.contains(current))
+        return;
+    // Perform Operations with current node
+
+    visited.add(current);
+    List<Integer> adjList = graph.getOrDefault(current, new ArrayList<>());
+    for(Integer node: adjList) {
+        dfs(graph, node, visited);
+    }
+}
+[end]
+
+## Check if Graph is bipartite
+If graph coloring is possible using two colors such that vertices are not connected to same color as itself
+
+[java]
+boolean isBipartite(Map<Integer, List<Integer>> graph, int start, Set<Integer> visited, Map<Integer, Integer> color) {
+    List<Integer> adjList = graph.getOrDefault(start, new ArrayList<>());
+    for(Integer node: adjList) {
+        if(!visited.contains(node)) {
+            // Visiting node for the first time
+            visited.add(node);
+            color.put(node, 1 - color.get(start));
+            if(!isBipartite(graph, node, visited, color))
+                return false;
+        } else if(color.get(node) == color.get(start)) {
+            // Since two connected nodes have same color
+            return false;
+        }
+    }
+    return true;
+}
+[end]
+
+## Detect cycle using DFS
+[java]
+boolean isCyclePresent(Map<Integer, List<Integer>> graph, Set<Integer> visited, int current) {
+    visited.add(current);
+    List<Integer> adjList = graph.getOrDefault(current, new ArrayList<>());
+    for(Integer node: adjList) {
+        if(!visited.contains(node)) {
+            // Visiting node for the first time
+            if(isCyclePresent(graph, visited, node)) {
+                return true;
+            }
+        } else if(current != node) {
+            // Since we reached here and we came from different nodes
+            return true;
+        }
+    }
+    return false;
+}
+[end]
+
+## Distance of nearest cell having 0
+[java]
+void findNearestZero(int[][] matix, int[][] output, int i, int j) {
+    if(matrix[i][j] == 0) {
+        output[i][j] = 0;
+        return 0;
+    }
+    int minVal = Integer.MAX_VALUE;
+    for(int[] dir: dirs) {
+        if(isValidBlock(dir[0], dir[1]))
+            minValue = Math.min(minValue, 1 + findNearestZero(matrix, dir[0], dir[1]));
+    }
+    output[i][j] = minValue;
+    return minVal;∑∑
+}
+[end]
+
+## Topologica Sorting
+This algorithm helps the scheduler know which task is dependent on another.
+[java]
+
+[end]

@@ -1,0 +1,248 @@
+1. Java Features:
+- Object Oriented: Everything in Java is an object.
+- Portable: Java is "write once and run anywhere", since the bytecode compiled in one environment will work same as that of other environment.
+- Platform Independent: Java runs in JVM which compiles the code into an intermediate state called bytecode, this bytecode is system Independent.
+- Secured: Bytecode verification phase checks if bytecode is valid. Java does not allow users to use Pointers for memory safety.
+- Robust: Java provides Exception Handling, Compile time type checking, Garbage Collection
+- Architecture Neutral: Since Java code runs in JVM and code is converted to Bytecode, it is not dependent on Architecture.
+- Interpreted: Java Bytecode is close to native code, which is Interpreted.
+- High Performance: Java uses JIT which offers High Performance.
+- Multithreading: Java provides support to Multi threading.
+
+2. C++ vs Java:
+- C++ is Platform dependent, Java is not.
+- C++ supports multiple Inheritance, Java does not allow that.
+- C++ supports operator overloading, Java does not.
+- C++ supports pointers, Java does not.
+- C++ is compiles, Java is both Compiled and Interpreted.
+- C++ supports call by value and reference, Java supports call by reference. 
+
+3. JDK:
+Software development kit for developing and executing Java Programs. It includes multiple tools like JRE, interpreter(java), compiler(javac), archiver(jar), disassembler(javap) document generator(javadoc).
+4. JRE:
+Provides an environment to run the java program. It contains JVM, libraries, supporting files.
+5. JVM:
+This enables execution of Java bytecode. This acts as runtime enviroment for Java program by providing verification of bytecode, interpreter, etc.
+
+6. JVM Architecture:
+The .java file is compiled into the .class file with same name. This .class file goes through multiple steps
+
+### .java --- javac Compiler ---> .class    Done by the compiler in JDK
+
+### .class ----> ClassLoader
+
+Class Loader System:
+Class loader performs 3 activities -
+    - Loading - Reads .class file, gets binary data, class name, Class/Interface/Enum, variables, methods and saves it in method ares.
+    - Linking - This verifies the bytecode, if it is valid or not.
+        - Verification - Ensures correctness of .class file, if it is valid or not using ByteCodeVerifier.
+        - Preparation - Allocates memory for static variables and default variables will be initialized.
+        - Resolution - Replaces symbolic referrences with direct reference to memoey locations. 
+    - Initialization - All static variables are initialized by their values.
+
+JVM Memory:
+    - Method Area - All class level information like name, parent name, methof, variables. This is a shared area, so not thread safe.
+    - Heap Area - Information of all objects is stored here. It is shared, so not thread safe.
+    - Stack Area - All local variables are stored here and it is thread specific and is destroyed after termination of thread.
+    - PC Register - Stores address of current execution of a thread. It is different for each thread.
+    - Native Method Area - Stores native method information. It is different for each thread.
+
+Execution Engine:
+This executes .class/bytecode. It reads bytecode line by line.
+    - Interpreter - Interprets bytecode line by line. So if one method is called multiple times, it will be interpreted again. 
+    - JIT - Just In Time compiler increases efficiency by 
+    - Garbage Collector - Performs the operation of Garbage Collection. It destroys unused objects. This makes the system memory efficient.
+        - Serial - Stops application during garbage collection using single thread so is slow and only good for small applications.
+        - Parallel - Stops application during garbage collection but uses multiple threads so is faster.
+        - CMS (Concurrent Mark Sweep) - multi-threaded and does not stop the application, runs concurrently.
+        - G1 (Garbage First) - Divides heaps into regions and collects garbage from the region with most garbage first. Does not stops the application.
+        - Z - Concurrent and focuses on low pauses, hence minimizing interruptions.
+        - Shenandoah - Concurrent and designed to keep low but consistent pause time.
+        - Epsilon - No Garbage collection, no clean up, this is used for benchmarking and testing purposes.
+
+JNI Native Interface:
+Interface to interact with Native Method libraries required for execution for hardware.
+Native Method Libraries:
+Collection of Native C/C++ libraries, required by JNI.
+
+7. Collection Framework:
+    - List - Holds List of objects, maintains order
+        - ArrayList
+        - LinkedList
+        - Vector
+    - Set - Holds unique objects
+        - HashSet
+        - LinkedHashSet
+        - TreeSet
+    - Queue - For FIFO manner storage
+        - LinkedList
+        - PriorityQueue
+    - Deque - Double Ended Queue, fast addition and removal of elements
+        - ArrayDeque
+    - Map - Stores unique keys for fast key-value retrival
+        - HashMap
+        - LinkedHashMap
+        - TreeMap
+        - Hashtable
+    - SortedSet - For storing sorted data in set
+        - TreeSet 
+    - NavigableSet - For fetch next element operation set
+        - TreeSet
+    - SortedMap - For storing sorted data in map based on keys
+        - TreeMap
+    - NavigableMap - For fetch next key operation set
+        - TreeMap
+
+8. Concurrent Collections:
+    - ConcurrentHashMap -
+    - ConcurrentSkipListMap - 
+    - CopyOnWriterArrayList - 
+    - CopyOnWriterArraySet -
+    - BlockingQueue - 
+    - ConcurrentLinkedQueue - 
+    - SynchronousQueue -  
+ 
+9. Stream API:
+This is used to process collectioms of objects introduced in Java 8. Streams dont change the original data structure.
+    - Intermediate Operations -
+        - map - convers the object from one form to another
+            Converts Stream of Person to Stream of Person Name
+            Stream.of(new Person("Alice", 30)).map(person -> person.getName())
+
+        - filter - filters the data based on condition provided
+            Filter people above 18
+            Stream.of(new Person("Alice", 30)).filter(person -> person.getAge() >= 18)
+
+        - sorted - sorts the object based on condition provided
+            Sort using first alphabet of Person name
+            Stream.of(new Person("Alice", 30)).sorted((p1, p2) -> p1.getName().charAt(0) - p2.getName().charAt(0))
+
+        - distinct - collects only distinct objects based on condition
+            Distinct people in list based on equals and hashCode
+            Stream.of(new Person("Alice", 30)).distict()
+
+            What if we want distinct people based on name
+            Stream.of(new Person("Alice", 30))
+                .collect(Collectors.toMap(
+                    p -> p.getName(),
+                    p -> p,
+                    (existing, replacement) -> existing
+                ))
+                .values().stream().collect(Collectors.toList())
+
+        - peek - performs operatons on the list without modifying the actual stream, for debugging, logging
+            Peek people
+            Stream.of(new Person("Alice", 30)).peek(person -> System.out.println("Processing: " + person))
+        
+        - flatMap - flattens the nested list
+            Stream.of(
+                Arrays.asList(
+                    new Person("Alice", 30, "New York"),
+                    new Person("Bob", 25, "San Francisco")
+                ),
+                Arrays.asList(
+                    new Person("Charlie", 35, "New York"),
+                    new Person("Eve", 22, "San Francisco")
+                )
+            ).flatMap(list -> list.stream())
+
+            if stream is of Map then 
+            flatMap(map -> map.entrySet().stream())
+
+
+        - limit - limits the number of objects
+            Limit 2 people in list
+            Stream.of(new Person("Alice", 30)).limit(2)
+
+        - skip - skips first n objects
+            Skip 2 people in list
+            Stream.of(new Person("Alice", 30)).skip(2)
+
+    - Terminate Operation - 
+        - collect - collect all objects to multiple datatypes
+            All Collectors
+            .stream().collect(Collectors.toList())
+            .stream().collect(Collectors.toSet())
+            .stream().collect(Collectors.toMap(data -> data.key, data -> data.value))
+            .stream().collect(Collectors.joining(",", "[", "]")) // delimiters, prefix, suffix
+            .stream().collect(Collectors.groupingBy(p -> p.getAge())) // creates a map of int to list of person, age against person
+            .stream().collect(Collectors.grouppingBy(p -> p.getAge(), Collectors.mapping(p -> p.getName(), Collectors.toList()))) // groups age against list of names
+            .stream().collect(Collectors.pertitioningBy(p -> p.isActive())) // partitions based on isActive {true: [people who are active], false: [people whi are not active]}
+            .stream().collect(Collectors.counting())
+
+        - forEach - perform any operation on all objects 
+            .stream().forEach(data -> {/* Process data here */})
+
+        - reduce - collects all objects imto one entity
+            Get person with max age 
+            .stream().reduce((p1, p2) -> p1.getAge() > p2.getAge() ? p1 : p2)
+
+        - count - count total objects
+            .stream().count() -> returns integer
+
+        - findFirst - finds first object and returns it in Optional
+            Returns first one more than 18
+            .stream().filter(p -> p.age > 18).findFirst().orElse(null)
+
+        - findAny - finds any object and returns it in Optional
+            Returns any one more than 18
+            .stream().filter(p -> p.age > 18).findAny().orElse(null)
+        
+        - allMatch - checks if all objects match the condition 
+            Returns true if all people are more than 18
+            .stream().allMatch(p -> p.age > 18)
+        
+        - anyMatch - checks if any object matches the condition
+            Returns true if any people are more than 18
+            .stream().anyMatch(p -> p.age > 18)
+        
+        - noneMatch - checks if no element matches the given condition
+            Returns true if no people are more than 18
+            .stream().noneMatch(p -> p.age > 18)
+
+
+11. Java String Constant Pool:
+13. Synchronization:
+14. Datatypes & Wrapper Class:
+15. Concurrency API:
+16. Synchronization Data Store Classes:
+17. Hash Collissions:
+18. Types of Variables & Default values:
+19. IO Stream:
+20. Serialization:
+21. Java Bitwise operators:
+22. How Java internally stores Bytes:
+23. Pointers:
+24. Static:
+25. Inheritance:
+26. Aggregation:
+27. Composition:
+28. Object Cloning:
+29. Override with Throws in Subclass:
+30. Virtual Functions:
+31. Covariant Return Type:
+32. Final Blank Variable:
+33. Abstract Class:
+34. Interface:
+35. Marker Interface/ Callable Interface/ Runnable Interface:
+36. Abstract vs Interface:
+37. Immutable Class:
+38. Exceptions:
+39. Checked vs Unchecked Exception:
+40. Garbage Collection:
+41. Storing password as Char Array:
+42. Regex:
+43. Nested Class:
+44. Anonymous Inner Class:
+45. Nested Interface:
+46. Packages:
+47. Externalizable Interface:
+48. Transient:
+49. Socket Programming:
+50. Reflection API:
+51. Multithreading:
+52. Thread Pool:
+53. Types Of Threads:
+54. Thread life cycle:
+55. Java Async:
+56. Synchronization block:

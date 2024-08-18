@@ -1,0 +1,51 @@
+# Rate Limiter System
+
+## Why do we need it?
+- To protect from dos attack
+- Ensures servers are not overburdened
+- Prevents resource starvation/abuse
+- Control consumption cost
+
+
+## Ways of Throttling
+- Slow down the call
+- Reject API
+- Ignore API
+
+
+## Example
+- API Gateway includes a feature where we can rate limit and throttle API requests
+
+
+## External Rate Limiter vs Attached Rate Limiter
+- Can be scaled independently || tightly coupled
+- Requires Additional hardware || no additional infrastructure
+- Includes performance overhead by adding a new call || Lower latency since it is integrated with the service
+
+
+## Functional Requirements
+1. Request Limiting based on IP address or User Id.
+2. The system should throttle requests if rate exceeds.
+3. Should support multiple policies {Global, User-specific, Service-specific}
+4. Proper Error Handling must be done, 429 too many requests.
+5. Whitelisting few IPs or User Id.
+6. Logging and Monitoring
+7. Should support dynamic configuration changes
+
+
+## Non-Functional Requirements
+1. Highly Available
+2. Secured
+3. Easy to integrate with system
+4. Minimal latency
+5. Scalable
+
+
+## Algorithms to Design Rate Limiter API
+1. Token Bucket
+2. Leaky Bucket
+3. Sliding Window logs
+4. Sliding Window Counters
+
+
+## 
