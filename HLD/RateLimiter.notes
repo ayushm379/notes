@@ -22,30 +22,71 @@
 - Requires Additional hardware || no additional infrastructure
 - Includes performance overhead by adding a new call || Lower latency since it is integrated with the service
 
+## Questions ->
+1. Fixed Window or Sliding Window?
+2. Client or Server??
+=> It will be Server side in most case
+3. What should happen if limit is reached?
+=> Some meaningful message should be sent to users
 
 ## Functional Requirements
-1. Request Limiting based on IP address or User Id.
-2. The system should throttle requests if rate exceeds.
-3. Should support multiple policies {Global, User-specific, Service-specific}
-4. Proper Error Handling must be done, 429 too many requests.
-5. Whitelisting few IPs or User Id.
-6. Logging and Monitoring
-7. Should support dynamic configuration changes
-
+1. Identify requests by IP address or User Id
+2. Fixed window or Sliding window
+3. Minimal effect on HTTP response time
+4. Server side rate limiting
+5. Provide feedback to API 
 
 ## Non-Functional Requirements
 1. Highly Available
-2. Secured
-3. Easy to integrate with system
-4. Minimal latency
-5. Scalable
+2. Minimal latency
+3. Scalable
+
+## Where rate limiter should be between APIs?
+1- Stand Alone Service 
+Client will first hit the rate limiter service, which will route to the API servers or send error.
+- More HTTP calls will add to latency
+- Will become bottle neck for services
+- Will become single point of failure
+- Resource allocation done for this
 
 
-## Algorithms to Design Rate Limiter API
-1. Token Bucket
-2. Leaky Bucket
-3. Sliding Window logs
-4. Sliding Window Counters
+2. Put the logic in the API server
+- Rate limiting logic will be duplicated
+
+3. Putting Rate Limiter logic in API Gateway, Reverse Proxy or Load Balancer
+This seems ideal as we have logic embedded in existing server and we are not having to duplicate it.
+
+## Data for Rate limiter
+- IP Address or UserId
+- Number of requests in last N minutes
+- Timestamp of latest request per IO/userId
+
+## Table Schema
+{userId, timeStamp, isSuccess} All Requests will be stored here
+
+Rate limiter will be connected to a data store
+We can use Sql database or a Cache to store data
+If we want low latency and built-in TTL then choose Redis
+If we want to store data for auditing, reporting then choose MySql
 
 
-## 
+Problems ->
+- Since we are saving one row for each request, this database will soon have millions of records
+- Query and Computation will be very slow and will consume lots of db cycles.
+
+Since we want temporary storage only and fast access. We will use Cache.
+
+
+So System will look like this
+
+User ----> API Gateway (Rate Limiter Integrated)  -----> API Service 
+              Or          |
+          Load Balancer   |
+                          v
+                        Cache
+  
+## User Feedback
+We will send user the code 429 (Too many requests)
+We can also add a header
+Retry-After : X.xy seconds
+
