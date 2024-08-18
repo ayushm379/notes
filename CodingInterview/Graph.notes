@@ -112,6 +112,38 @@ void findNearestZero(int[][] matix, int[][] output, int i, int j) {
 
 ## Topologica Sorting
 This algorithm helps the scheduler know which task is dependent on another.
+Algorithm:
+    - Perform DFS operation on every vertex
+    - If a vertex and its children has been computed completely, push it to a stack
+    - Pop the stack and add the values to list, hence reversing the stack on a list.
+    - This will let us know which node has to be processed first and has no dependencies on the one before it.
 [java]
-
+void tpSortHelper(Map<Integer, List<Integer>> graph, Set<Integer> visited, Stack<Integer> stack, int node) {
+    visited.add(node);
+    List<Integer> adjList = graph.getOrDefault(node, new ArrayList<>());
+    for(int child: adjList) {
+        if(!visited.contains(child)) {
+            tpSortHelper(graph, visited, helper, child);
+        }
+    }
+    stack.push(node);
+}
+List<Integer> topologicalSort(Map<Integer, List<Integer>> graph, Set<Integer> visited, Stack<Integer> stack) {
+    for(int node: graph.keySet()) {
+        if(!visited.contains(node)) {
+            tpSorthelper(graph, visited, stack, node);
+        }
+    }
+    List<Integer> tpSortList = new ArrayList<>();
+    while(!stack.isEmpty()) {
+        tpSortList.add(stack.peek());
+        stack.pop();
+    }
+    return tpSortList;
+}
 [end]
+
+
+
+
+
