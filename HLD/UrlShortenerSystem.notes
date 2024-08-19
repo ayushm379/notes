@@ -1,0 +1,161 @@
+# Short URL like TinyURL service
+
+## Questions
+- How long you want to persist a URL? Ans. 10 years
+- Can there be custom shor URLs? Ans. not as of not
+- How many hashes could be created per day? Ans. 100M per month
+- What all characters can be present in shortUrl? Ans. [A-Za-z0-9]
+
+## Functional Requirements
+- Generate a short URL from provided long URL
+- On clicking the short URL, it should redirect to the long URL associated witht it
+- Users can create custom short URL with maximum 16 characters
+- Shortened links generated should expire after some time
+- Secured
+
+* Additionally we can add Rate limiter to limit the number of short URLs created by a user
+  This Rate limiting could be based on userId or the pack purchased by the user.
+  Pack Eg - BASIC(10 URLs per day), SILVER(50 URLs per day), GOLD(100 URLs per day)
+
+
+## Non Functional Requirements
+- Highly Available
+- Low latency redirections
+- Should expose Rest APIs so that it can be integrated with third party application
+- Reliable, a short URL should not open random long URL
+- Should not be predictable
+
+
+## Capacity Estimation
+- Read:Write ratio -> 200:1
+- Per months new Links -> 100M (Or any big number)
+- This implies 100,000,000/(30 * 24 * 3600) = 38 ~ 40 writes per second
+- Since we have 200:1 read-write ratio, it becomes 40*200 = 8000 Reads per second
+
+## Storage
+The above data will help us to know how big storage we require
+Life time of a service is 100 years
+
+1 Month generates 100 Million data objects
+1 * 12 * 100 (100 years) will generate 100M * 1200 = 120 Billion data objects
+
+## Data Model
+Links : {
+  shortURL: VARCHAR(20) = 20 Bytes + 1 Overhead Byte(length of the string is stored by DB)
+  longURL: VARCHAR(225) = 225 Bytes + 1 Overhead Byte
+  createdBy: VARCHAR(20) = 20 Bytes + 1 Overhead Byte
+  createdAt: DATETIME = 8 bytes
+}
+Users: {
+  userId: varchar(20) = 20 + 1 Bytes
+  firstName: varchar(75) = 75 + 1 Byets
+  lastName: varchar(75) = 75 + 1 Byte
+  email: varchar(100) = 100 + 1 Bytes
+}
+Users 1:M Links
+
+This makes one object to be approx 250 Bytes per Link.
+
+## Storage Estimation
+- 1 month generates 100M records
+- 1 Year generates 100M * 12 records = 1200M = 1.2B
+- 100 Years generate 1.2B*100 = 120B records
+- 1 Record = 250 Bytes
+- 120B records = 120B * 250 Bytes = 30000B Byte = 30TB
+
+## Cache Estimation
+Pareto Principle -> 80:20 caching rule
+80% of the caching is done for 20% of the data
+
+Since we have 8000 reads/second
+So for 24 * 60 * 60 * 8000 ~ 700M reads/day
+20% of 700M = 140M
+140M * 250 Bytes = 35B bytes = 35GB
+
+## APIs
+// USER APIs to register, login, logout
+
+String redirect(String shortURL)
+String shortenURL(String url, long userId, String apiKey, Date expiry)
+Boolean deleteURL(String apiKey, String originalURL, String shortURL)
+
+## Database Selection 
+Since we require High Availability, Low latency and do not have complex querries or transaction, NoSql database will be better than Sql database.
+** Now amongst NoSql databases which one should we select?
+- We want data to persist and also TTL
+We can use:
+  - Mongodb (newer versions support TTL index) or 
+  - Redis (By keeping disk snapshots to persist data on key updates) or 
+  - Dynamodb 
+
+## Data Models
+URL {
+  original_url, shorten_url, user_id, expiry_date, created_at
+}
+USER {
+  user_id, name, email, api_key, created_at
+}
+
+## Algorithm for mapping to avoid collisions
+Since we have 62 characters [A-Za-z0-9].
+So for n length we have 62^n number of combinations
+
+URLs Generated in 10 years = 100M * 12 * 10 = 12000M = 12B urls
+
+62^n should be greater than 12B
+n = log(12B) with base 62 ~ 7
+
+We cannot consider algorithms like UUID or MD5 as they generate very long key and taking the first n characters will give a lot of collisions.
+
+So we will use Base62
+which takes in a number and returns a string with those 62 characters.
+
+So we will generate a random number and return its base62's output
+
+But what if there is a collision, 
+  to resolve this, we will use a query put if absent.
+      - BUT putIfAbsent is not present in NoSql databases
+
+Redis can provide a counter, on every request we can get the counter from redis and convert it to base62
+  The problems with this approach will be
+    - The next URL will be predictable as Base62 is not 
+    - Redis will become single point of failure
+
+To resolve this, we will create a Range Service, that will provice a range to URL shortner service on:
+      - booting of new instance of URL Shortner Service and 
+      - on exhaustion of range
+URL Shortener Service will increment the counter in the range and convert the int to base62
+
+But Token Service can also go down and become single point of failure.
+
+Range Service will store the Ranges provided in the database
+
+On High Traffic, we can scale Range Service by following ways:
+  - Increase number of instances of Token Service
+  - Increase the range provided to URL Shortener Service
+
+
+Final Design
+
+                  
+User ---> Load Balancer ---> [URL SHORTNER SERVICE] x N   ----> [Range Service] x M  
+                                |                                      |
+                                |                                      |
+                                |                                      |
+                                |                                      |
+                              MongoDb                                MySql       
+                      (Consistent Hash Partitioning
+                             and r/w replicas)
+
+## Analytics
+URL SHORTENER SERVICE   ----- Kafka ---->   Analytics Service
+
+Using Async way, we can push all get requests to kafka, which will let the analytic service know
+  - How many times a link is called
+  - From which geographic area
+
+But if on every call, Kafka and Analytic service could be overwhelmed in peak hours.
+To resolve this, we can aggregate requests locally in a queue and as it hits a certain threashhold, we will push it to the kafka.
+
+But what if before push it to the kafka, the service goes down. Since the analytics here are not critical so we will let them go.
+
