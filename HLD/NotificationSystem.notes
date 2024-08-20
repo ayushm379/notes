@@ -1,0 +1,80 @@
+# Notification System
+
+## Questions 
+- Do we have to develop a Saas or an integrated module?
+- Do we have to include rate limiter on how many non important notifications a user can get?
+- Do we provide the capability to unsubscribe from promotional mails?
+- Do we have to consider Bulk Notifications features?
+- Do you want a way to audit all the Notifcations?
+
+## Functional Requirements
+- Send Notifications
+- Plug-in - can plug-in more types of notifications
+- SAAS - Expose APIs for third parties to use
+- Rate Limited - How many notifications a user can receive? (But High priority notifications will always be sent out)
+- Prioritization
+
+## Non Functional Requirements
+- High Availability
+- Multiple clients should be supported
+
+## Basic Architecture
+
+Multuple Service  ----> Notification Service ------> Email Third Party Service
+                        |           |        ------> Sms Third Party Servuce
+                        |           |        ------> Push Notification Service
+                User Information Rate Limiting
+                (SQL Database)    (Cache)
+
+
+Problems with this approach ->
+  - Single Point of failure
+  - On peak hours Notifcation Service will ger overloaded as all operations are synchronous
+  - Notifications will be lost on failure or before horizontal scaling
+
+We will introduce a Message Queue that will store all the notifications.
+The consumers will fetch the notifications from Message Queue.
+
+This will make the system Asynchronous and we can scale queue up and down based on requirements.
+
+
+Multuple Service  ----> Notification Service --- Message Queue ------> Worker 1 ------> Email Third Party Service
+                        |           |                                           ------> Sms Third Party Servuce
+                        |           |                          ------> Worker 2 ------> Push Notification Service
+                User Information Rate Limiting
+                (SQL Database)    (Cache)
+
+
+Workers are lambda/functions that have only one job to ask as consumer of message queue and send to the third party service.
+These workers are lightweight and highly scalable.
+
+** But what if the third party service API fails? Messages will still be lost!
+We can have another table, where we can store the notification Id, status and retry count.
+
+All the status will be written on the table and all components will act as a workflow where we update status on different components.
+If the status of notifications are failued and retry count < a threshold value, we will retry sending the same notification.
+
+We can have a cron job that runs in every hour or half, which enqueue the failed notifications. So workers can try to send them again.
+
+
+##### ANOTHER ARCHITECTURE #####
+Bulk Service <------>  Query Engine       User Transaction Data (Delivered/Cancelled)
+       |    (Connected to Elastic Search)           |
+       |                                            | 
+       v                                            v
+Notification Service --- Messaging Queue ---> Prioritization Service --- Messaging Queue --->  Rate Limiter ------>  User Preference ----- Message Queue ----> Email Handler/Consumer   ---> Email Third Party Service
+                                                                                       Request Counting for user    Preference DB                        ----> In App Handler/Consumer  ---> Firebase
+                                                                                         (Connected with Cache)   (Connected with SQL Db)                ----> SMS Handler/Consumer     ---> Sms third Party Handler
+                                                                                                                                                         ----> Notification Tracker 
+                                                                                                                                                          (Write Intesive Database - Cassandra)                
+- Notification Service will send all the notifications to a messaging queue so as to make the service Async and scaling becomes easy by increasing the queue size or number of consumers.
+- Validators & Prioritization Service will Prioritize the messages based on the type of message. Eg- OTP or transaction message will be high priority than promotional
+- User Transaction Data - 
+- Rate Limiter can be of two types, we can rate limit based on client's pack since this is a SAAS or we can rate limit based on a configuration that on a day user can get only 2 promotional messages.
+Rate Limiter will also have a Request Counter with in, that will count the requests for every client of the Saas platform, if they have opted for infinite number of notifications.
+- Notification Handler & User Preference - If User has opted for sms rather emails, or if user has unsubcribed from the promotional emails.
+- There are multiple handlers which will be designed as plugin model, so if we will want another type of notifications, we can create another handler.
+- Notification Tracxker - Which puts all notifications to the cassandra database which is write intesive database for audit.
+- Bulk Notification Service - Takes in a filter criteria, which will be connected to query engine, then will push the users and message to Notification Service
+- Query Engine which will have the access to search engine, will return the list of users to bulk notification service.
+
