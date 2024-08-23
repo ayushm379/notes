@@ -1,0 +1,431 @@
+# Flask
+
+## Creating Flask Application
+
+[python]
+# pip install virtualenv -- Installing a module that creates vi
+# pip -m venv env -- using venv create an environment with name
+# venv/Scripts/active or source venv/bin/activate to activate t
+# Install Flask
+# pip install flask
+###############################################################
+# Import flask module
+# An object of Flask class is WSGI application
+from flask import Flask
+# Flask constructor takes current module's name
+app = Flask(__name__)
+# get funciton is a decorator
+# this bounds route "/" with the method defined below it
+@app.get("/")
+def hello_world():
+    return "Hello World"
+# main method
+r h
+#
+ if __name__ == '__main__':
+    # this runs the development server
+    app.run()
+[end]
+
+## Running Flask Application
+Run Function
+host: hostname to listen to, default is 127.0.0.1
+port: default is 5000
+debug: provides debug information. default is False. options: Forwarded to underlying Werkzeug server.
+
+## Werkzeug
+Collection of libraries that can be used to create WSGIWeb server gateway interface) compatible with Python web apps.
+Taking input in APIs
+
+flask --app <app_name> run
+flask run
+python <starting_file_path>.py
+
+[python]
+from flask import Flask, request
+app = Flask(__name__)
+# Taking Path parameter
+@app.get("/hello/<name>")
+def hello(name):
+    # the path variables datatypes can be
+    # String -> <name>
+    # int -> <int:age>
+    # float -> <float:price>
+    # path -> <path:folder>
+    # uuid -> <uuid:id>
+    return f"Hello {name}"
+# Taking json data
+@app.post("/user")
+def get_user():
+    data = request.get_data()
+    # request.data -> incomming request as string
+    # request.args -> key value pairs in url query
+    # request.form -> key value pair from HTML post form
+    # request.files -> files in the body, forms must use multip
+    # request.values -> combines args and form, prefers args if
+    # request.json -> gets json data with application/json cont
+    # request.get_json(force=True) to ignore the content type
+    return data
+[end]
+
+## Creating APIs
+
+[python]
+@app.route("/hello")
+def hello():
+    if request.method == 'POST':
+        return "POST"
+    else:
+        return "Hello"
+# Another method is
+def hello_world():
+    return "Hello World"
+app.add_url_rule("/", 'hello_world', hello_world)
+[end]
+
+## Flask SqlAlchemy
+
+[python]
+# pip install flask-sqlalchemy
+from flask_sqlalchemy import SQLAlchemy
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.sql
+# Creating database object
+db = SQLAlchemy(app)
+class Students(db.Model):
+    id = db.Column(db.String(100), primary_key=True)
+    usrename = db.Column(db.String(100), unique=False)
+    first_name = db.Column(db.String(100), nullable=False)
+    age = db.Column(db.Integer)
+    active = db.Column(db.BOOLEAN, default=True)
+    percentile= db.Column(db.Float, nullable=False)
+    # char, numeric, smallint, biginteger, enum, date, time, da
+    def __init__(self, username, first_name, age, percentile):
+        self.username = username
+        self.first_name = first_name
+        self.age = age
+        self.percentile= percentile
+    def __repr__(self):
+        return f"{self.id} : {self.first_name}"
+# Create Database and all Tables when app is up
+with app.app_context():
+    db.create_all()
+[end]
+
+## Flask Migrate
+
+Database migrations to create and update database and tables.
+
+[python]
+# pip install Flask-Migrate
+from flask_migrate import Migrate, migrate
+migrate = Migrate(app, db)
+[end]
+
+To create migrations run commands flask db init
+flask db migrate -m “Initial migrateˮ flask db upgrade
+Operations using SQLAlchemy
+
+
+## Create data
+
+[python]
+# Create object of the db model
+student = Student("at", "ayush", 25, 92.2)
+
+# Add the student object to session
+db.session.add(student)
+
+# Commits the changes if there are no error while adding
+db.session.commit()
+
+## Update data
+# Update the data object and commit
+student["age"] = 26
+db.session.commit()
+
+## Delete data
+# Pass the object to delete in session
+db.session.delete(student)
+db.session.commit()
+
+## Get data {LEGACY QUERY INTERFACE}
+# get all the data, get all data objects
+students = Student.query.all()
+
+# query by parameters, get all data objects
+students = Student.query.filter_by(age=26).all()
+
+# query by primary key, get one data object
+student = Student.query.get("52").first()
+
+# Pagination
+Student.query.offset(offset_number).limit(count_number).all()
+
+# ANOTHER METHOD
+# We can query through db object as well
+user = db.session.execute(db.select(Student).filter_by(username
+users = db.session.execute(
+    db.select(Student)
+        .filter_by(username=username)
+        .order_by(User.username)
+).scalars()
+
+# get data or throw 404 exception
+db.get_or_404(
+    db.select(Student)
+        .filter_by(username=username),
+    description = f"User {username} not found"
+)
+[end]
+
+## Serialize
+[python]
+from flask import jsonify
+
+# if serialized object then
+return jsonify(data)
+
+# if list of obejcts which is not serialized
+return jsonify([user.serialize() for user in users])
+[end]
+
+## Joins
+[python]
+
+# One to Many
+class Person(db.Model):
+    id= db.Column(db.Integer, primary_key=True)
+    addresses = db.relationship('Address', backref='person', la
+    # For one to one pass uselist=False
+class Address(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+  person_id = db.Column(db.Integer, db.ForeignKey('person.id'),
+
+# To query
+Address.query.with_parent(user)
+
+# Many to Many
+tags = db.Table('page_tags',
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), pr
+    db.Column('page_id', db.Integer, db.ForeignKey('page.id'),
+)
+class Page(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tags = db.relationship('Tag', secondary=tags, lazy='subquer
+        backref=db.backref('pages', lazy=True))
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+[end]
+
+## Error Handler
+ 
+[python]
+from werkzeug.exceptions import HTTPException
+from flask import abort
+
+# Handling 404
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({
+        "success": False,
+        "message": "Not Found"
+    })
+
+# Handle generic exception
+@app.errorhandler(Exception)
+def handle_error(e):
+    code = 500
+    if isinstance(e, HTTPException):
+        code = e.code
+    return jsonify(error=str(e)), code
+
+# to throw exception
+abort(409)
+[end]
+
+## Flask Jwt
+[python]
+
+# pip install flask-jwt-extended
+from flask_jwt_extended import create_access_token, get_jwt_ide
+
+# to configure secret key and expire time
+app.config["JWT_SECRET_KEY"] = "secret"
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 230
+
+# Creating jwt instance
+jwt = JWTManager(app)
+
+# Creating Jwt token
+access_token = create_access_token(identity=username)
+
+# Validate api
+@jwt_required()
+@app.get("/hello")
+def protected_hello():
+    current_user = get_jwt_identity()
+
+# Convert object to JSON serializable format
+@jwt.user_identity_loader
+def user_identity_lookup(user):
+    return user.id
+
+# Lookup user based on id from database when ever protected rou
+@jwt.user_lookup_loader
+def user_lookup_callback(_jwt_header, jwt_data):
+    identity = jwt_data["sub"]
+    return User.query.filter_by(id=identity).one_or_none()
+
+# Additional Claims
+create_access_token(token, additional_claims={})
+
+# OR
+@jwt.additional_claims_loader
+def add_claims_to_access_token(identity):
+    return {
+        "aud": "audience",
+        "name": identity.upper()
+}
+
+# To get claims
+claims = get_jwt()
+
+# Optional Security
+@jwt_required(optional=True)
+
+# this lets both logged in and anonymus users to access the api
+# Logout or Blocking access using Redis
+
+
+## Redis
+[pyhton]
+import redis
+jwt_redis_blicklist = redis.StrictRedis(
+    host="host", port=4535, db=0, decode_responses=True
+)
+@jwt.token_in_blocklist_loader
+def check_if_token_is_revoked(jwt_header, jwt_payload):
+    jti = jwt_payload["jwt"] # jwt unique identifier
+    return jwt_redis_blocklost.get(jti) is not None
+def logout();
+    jti = get_jwt()["jti"]
+    jwt_redis_blocklist.set(jti, "", ex=ACCESS_EXPIRES)
+    return {}
+[end]
+
+## Flask PyMongo
+[python]
+# pip install Flask-PyMongo
+
+# Set up of PyMongo
+from flask import Flask
+from flask_pymongo import PyMongo
+app = Flask(__name__)
+app.config["MONGO_URI"] = "mongodb://localhost:27017/myDatabase
+mongo = PyMongo(app)
+
+# to find one data from users table
+# we dont need to create users table
+mongo.db.users.find_one_or_404({"_id": username})
+mongo.db.users.find({"online": True})
+mongo.db.users.find_one({"online": True})
+
+# Connect with multiple databases
+mongo1 = PyMongo(app, uri="mongodb://localhost:27017/databaseOn
+mongo2 = PyMongo(app, uri="mongodb://localhost:27017/databaseTw
+mongo3 = PyMongo(app, uri="mongodb://another.host:27017/databas
+
+# Queries
+mongo.db.users.insert_one(data)
+mongo.db.users.delete_one({"_id": username})
+result=mongo.db.user.update_one({"_id":user_id}, {"$set": dict(
+"""
+ similaryly
+ find_many()
+ update_many()
+ delete_many()
+ insert_many()
+ Skip() and limit() methods for pagination
+""")})
+[end]
+
+## Flask Pyctuator
+[python]
+
+# pip install flask-pyctuator
+from flask_pyactuator.flask_pyactuator import FlaskPyctuator
+from pyctuator.health.redis_health_provider import RedisHealthP
+import redis
+FlaskPyctuator(
+    app,
+    "Service Name"
+    app_url="http://localhost:5000",
+    pyctuator_endpoint_url="http://host.docker.internal:5000/ac
+    registration_url="" # Admin server url of Spring boot proje
+                                            # with spring web a
+)
+r = redis.Redis()
+pyctuator.register_health_provider(RedisHealthProvider(r))
+[end]
+
+## Caching
+[python]
+# pip install Flask-Caching
+from flask import Flask
+from flask_caching import Cache
+app = Flask(__name__)
+# Creating instance of Cache
+config = {
+    "DEBUG": True,          # some Flask specific configs
+    "CACHE_TYPE": "SimpleCache",  # Flask-Caching related confi
+    "CACHE_DEFAULT_TIMEOUT": 300
+}
+app.config.from_mapping(config)
+cache = Cache(app)
+"""
+    CACHE_TYPE
+        NullCache : NullCache
+        SimpleCache : SimpleCache
+        RedisCache : MemcachedCache
+        RedisSentinelCache :
+        RedisClusterCache : RedisCache
+        FileSystemCache : File System Cache
+    CACHE_REDIS_HOST: Redis host
+    CACHE_REDIS_PORT: Redis port
+    CACHE_REDIS_PASSWORD: Redis password
+    CACHE_REDIS_DB: Redis db
+    CACHE_REFIS_URL: Redis complete url with all above
+    CACHE_REDIS_CLUSTER:
+"""
+with app.app_context():
+    # Clear previous cache if required
+    cache.clear()
+    # Initializing cache with app
+    cache.init_app(app)
+
+# Usage
+@cache.cached(timeout=50) # 50 seconds
+def index():
+    return "Hello World"
+
+# Save all comments
+@cache.cached(timeout=100, key_prefix='all_comments')
+def get_all_comments():
+    comments = get_comments_from_db()
+    return comments
+
+# Custom key
+def make_key():
+    user = get_current_user()
+    return user.username
+@cache.cached(timeout=60, make_cache_key=make_key)
+def user_function():
+    # What ever this will return, will be saved with
+    # current username as key
+    pass
+"""
+cache.get() to get from cache
+cache.set() to set into cache
+"""
+
+[end]
