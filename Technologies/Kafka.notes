@@ -1,0 +1,126 @@
+# Kafka
+Kafka is distributed streaming platform.
+It lets you publish and subscribe stream of records.
+It stores streams of records in fault-tolerance way.
+
+
+# Message Broker 
+
+Producer    ------>  | Message |  ------>     Consumer
+Producer    ------>  | Broker  |  ------>     Consumer
+
+
+Producer    ------>  | Kafka Cluster |    ------>   Consumer
+                     |               |
+                     |   Broker 1    |
+    DB1 <------      |   Broker 2    |
+    Connectors       |   Broker 3    |    <------>   Stream Processor Apps
+                     |               |
+    DB2 ------>      |   Zookeeper   |
+                     |               |
+
+# Terminologies
+- Producer sends message to Kafka Cluster, which makes the task async.
+- Message is a small to medium size data.
+- Kafka Cluster is a bunch of brokers running in multiple servers.
+- Consumer will get messages from the Kafka Cluster and it will perform required operations on it.
+- Stream means a continuous flow of messages
+- Stream Processor consumes records from Kafka topics, processes them(filter, aggreegate, join), and then produces the result to other topics
+- Kafka Connectors can import data from database to kafka and export data from kafka to database
+- Broker is a kafka server, since Kafka acts as a Message Broker between Producer and Consumer
+- Cluster is a group of computer that shares a similar workload
+- Topic is a unique identifier for a data stream.
+- Partition - Broker stores data for a topic, which can be larger than storage capacity of single system, so we can break down topics into partitions.
+    partitions can be distributed across multiple systems. While creating a topic we can decide this. But every partitions sits on single a machine and can't be broken further.
+- Replication Factor - maintaining multiple copies of a partitions, for making system fault tolerance.
+- Offset is a sequence id given to a message as partitions are arrived and does not changes. There is no global offsets across the partitions.
+So to locate a message, we should knor [ Topic Name -> Partition Number -> Offset ]
+- Consumer Group are a group of consumers that act as a single unit.
+- Leader & Followers - This is how kakfa makes copies. For every partition, a boken becomes a leader. Producer sends to leader, stores locally. Consumer fetches from leader. 
+    Kafka will identify two more brokers as followers and these will copy the data from leader. They don't talk to producer or consumers directly.
+
+# Zookeeper
+A centralized service for maintaining configuration, providing distributed synchronization. 
+
+# Kafka's Custom Protocol                   |                  AMQP(Advanced Message Queuing Protocol)
+Publish-subscribe Model                     |       Point to Point & Publish Subscribe both
+Flexible Key-value format                   |       This has formalized message body
+For High throughput distributed streaming   |       For message queuing and routing between Producer & Consumer
+TCP based binary Protocol                   |       AMQP is TCP based protocol but with frame oriented design
+Stateless protocol                          |       Stateful where client maintains session with the broker
+
+# Kafka operations
+
+# Starting Zookeeper Server
+zookeeper-server-start /usr/local/etc/zookeeper/zoo.cfg
+zookeeper-server-stop
+
+
+# Starting Kafka
+kafka-server-start /usr/local/etc/kafka/server.properties
+kafka-server-stop
+
+
+# Create Topic
+kafka-topics --create --topic <topic-name> --bootstrap-server localhost:9092 --partitions 2 --replication-factor 3
+
+
+# Other Topics Operations
+kafka-topics --list --bootstrap-server localhost:9092
+kafka-topics --describe --topic <topic-name> --bootstrap-server localhost:9092
+kafka-topics --delete --topic <topic-name> --bootstrap-server localhost:9092
+
+kafka-topics --alter --topic <topic-name> --partitions 3 --bootstrap-server localhost:9092
+
+
+# Producer
+kafka-console-producer --topic <topic-name> --bootstrap-server localhost:9092
+
+
+# Consumer
+kafka-console-consumer --topic <topic-name> --from-beginning --bootstrap-server localhost:9092
+
+
+# Consumer Groups
+kafka-consumer-groups --bootstrap-server localhost:9092 --list
+kafka-consumer-groups --bootstrap-server localhost:9092 --describe --group <group-name>
+
+# Spring Kafka 
+Include spring-kafka dependency
+
+# Creating new Topic 
+@Bean
+public NewTopic topic() {
+    return TopicBuilder.name("test-topic").partitions(2).replicas(2).build();
+}
+
+# Creating Kafka Consumer 
+@KafkaListener(id = "listenerId", topics = "test-topic")
+public void consumer(String input) {
+    System.out.println("Found Input " + input);
+}
+
+# Creating Kafka Producer
+@Autowired
+private KafkaTemplate<Integer, String> kafkaTemplate;
+
+# Kafka Tempalte methods
+send("topicName", "Data");
+send("topicName", partitionId, "Data");
+Message<String> message = MessageBuilder
+    .withPayload("Data")
+    .setHeader(kafkaHeaders.TOPIC, "testTopic")
+    .build();
+send(message);
+send("topicName", partitionId, "keyId", "Data")
+sendDefault("Data") // Sends to default topic
+executeInTransaction(operations -> {
+    operations.send("topicName", "Data");
+    // Database Update
+    // API Call
+    // This all will run in 1 transaction
+})
+flush() // ensures all previous messages are sent 
+
+
+
